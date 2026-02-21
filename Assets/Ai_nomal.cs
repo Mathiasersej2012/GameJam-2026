@@ -4,7 +4,7 @@ using UnityEngine.AI;
 [RequireComponent(typeof(NavMeshAgent))]
 public class Ai_nomal : MonoBehaviour
 {
-    public Transform target;
+    [SerializeField] private Transform target;
     public float stoppingDistance = 0.5f;
     public GameObject explosionPrefab;
     public int towerDamage = 1;
@@ -25,9 +25,11 @@ public class Ai_nomal : MonoBehaviour
         agent.stoppingDistance = stoppingDistance;
 
         towerHealth = FindFirstObjectByType<TowerHealth>();
+        if (towerHealth != null && target == null)
+            target = towerHealth.transform;
 
-        if (towerHealth == null)
-            Debug.LogWarning("Ai_nomal: Could not find TowerHealth in Start().");
+        if (towerHealth == null && target == null)
+            Debug.LogWarning("Ai_nomal: Could not find TowerHealth/target in Start().");
 
         if (target != null)
         {
