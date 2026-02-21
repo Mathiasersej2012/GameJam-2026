@@ -20,8 +20,27 @@ namespace StarterAssets
 		public float RotationSpeed = 1.0f;
 		[Tooltip("Acceleration and deceleration")]
 		public float SpeedChangeRate = 10.0f;
+        public static float sensitivity = 1f;
+        public Transform playerBody;
+        float xRotation = 0f;
 
-		[Space(10)]
+		void update()
+		{
+            
+                float mouseX = Input.GetAxis("Mouse X") * sensitivity;
+                float mouseY = Input.GetAxis("Mouse Y") * sensitivity;
+
+                xRotation -= mouseY;
+                xRotation = Mathf.Clamp(xRotation, -90f, 90f);
+
+                transform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
+                playerBody.Rotate(Vector3.up * mouseX);
+            
+        }
+
+		
+
+        [Space(10)]
 		[Tooltip("The height the player can jump")]
 		public float JumpHeight = 1.2f;
 		[Tooltip("The character uses its own gravity value. The engine default is -9.81f")]
