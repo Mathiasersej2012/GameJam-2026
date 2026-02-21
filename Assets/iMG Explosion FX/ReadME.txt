@@ -40,7 +40,10 @@ it Matters Games UG 2013
 
 
 The following HTML tags are allowed in your description text: <em> <strong> <a> and <br>. Styles, class and id attributes are not allowed. Use of <br> (not </br>) to insert line breaks.
--------
+
+
+
+-------
 Looking to boost your projects's special FX fidelity?<br>
 <br>
 <strong>Go with iMG's Explosion FX package!</strong><br>
