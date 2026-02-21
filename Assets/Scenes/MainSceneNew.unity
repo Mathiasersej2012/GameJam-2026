@@ -896,8 +896,8 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
---- !u!64 &120825509
-MeshCollider:
+--- !u!65 &120825511
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -914,10 +914,9 @@ MeshCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 0}
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!43 &216312650
 Mesh:
   m_ObjectHideFlags: 0
@@ -6104,11 +6103,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 04f52bfda92544e48bb61670cf1f3931, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 177.52
+      value: 170.54
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 04f52bfda92544e48bb61670cf1f3931, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 541.18
+      value: 490.15
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 04f52bfda92544e48bb61670cf1f3931, type: 3}
       propertyPath: m_LocalRotation.w
@@ -6145,6 +6144,10 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: 04f52bfda92544e48bb61670cf1f3931, type: 3}
       propertyPath: m_Name
       value: big boy
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 04f52bfda92544e48bb61670cf1f3931, type: 3}
+      propertyPath: m_TagString
+      value: Enemy
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -11764,14 +11767,15 @@ PrefabInstance:
       propertyPath: m_Name
       value: Joe the fast runner
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 50cb1136b2aee9545acc79852205e43d, type: 3}
+      propertyPath: m_TagString
+      value: Enemy
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects:
     - {fileID: -2845779275431937956, guid: 50cb1136b2aee9545acc79852205e43d, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 50cb1136b2aee9545acc79852205e43d, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 120825509}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 50cb1136b2aee9545acc79852205e43d, type: 3}
       insertIndex: -1
       addedObject: {fileID: 120825508}
@@ -11781,6 +11785,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 50cb1136b2aee9545acc79852205e43d, type: 3}
       insertIndex: -1
       addedObject: {fileID: 120825506}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 50cb1136b2aee9545acc79852205e43d, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 120825511}
   m_SourcePrefab: {fileID: 100100000, guid: 50cb1136b2aee9545acc79852205e43d, type: 3}
 --- !u!43 &1942104024
 Mesh:

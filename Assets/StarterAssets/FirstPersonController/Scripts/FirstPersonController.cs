@@ -105,6 +105,18 @@ namespace StarterAssets
 			}
 		}
 
+		[Header("Forward (W) Audio")]
+		[Tooltip("Audio clip that plays while holding W (looped).")]
+		[SerializeField] private AudioClip forwardLoopClip;
+		[Tooltip("Volume for the forward loop audio.")]
+		[Range(0f,1f)]
+		[SerializeField] private float forwardVolume = 1f;
+		[Tooltip("Minimum Y value of move input to consider 'W' pressed.")]
+		[SerializeField] private float forwardThreshold = 0.5f;
+
+		private AudioSource _audioSource;
+		private bool _isWalkingForward;
+
 		private void Awake()
 		{
 			// get a reference to our main camera
