@@ -20,11 +20,21 @@ public class Helicopter : MonoBehaviour
     [Tooltip("Amount of damage applied to the tower when hit.")]
     public int towerDamage = 1;
 
-        private Vector3 destination;
+    private Vector3 destination;
     private bool destinationSet;
+
+    // Cached reference to the TowerHealth found at start (if any)
+    private TowerHealth _cachedTowerHealth;
 
     void Start()
     {
+        // Find the first object in the scene that has a TowerHealth and use its transform as target.
+        _cachedTowerHealth = FindObjectOfType<TowerHealth>();
+        if (_cachedTowerHealth != null)
+        {
+            target = _cachedTowerHealth.transform;
+        }
+
         if (target != null)
         {
             // Set destination once at start (no continuous destination updates)
@@ -33,7 +43,7 @@ public class Helicopter : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("Helicopter: No target assigned on " + name + ". Destination not set.");
+            Debug.LogWarning("Helicopter: No target assigned or no TowerHealth found in the scene on " + name + ". Destination not set.");
             destinationSet = false;
         }
     }
@@ -76,5 +86,56 @@ public class Helicopter : MonoBehaviour
         target = newTarget;
         destination = newTarget.position;
         destinationSet = true;
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (!collision.gameObject.CompareTag("Tower"))
+            return;
+
+        // Try to get TowerHealth from the hit object or its parents. Fall back to cached one.
+        TowerHealth tower = collision.gameObject.GetComponent<TowerHealth>() 
+                            ?? collision.gameObject.GetComponentInParent<TowerHealth>() 
+                            ?? _cachedTowerHealth;
+
+        if (tower != null)
+        {
+            tower.TakeDamage(towerDamage);
+        }
+        else
+        {
+            Debug.LogWarning("Helicopter: Hit Tower but no TowerHealth found on " + collision.gameObject.name);
+        }
+
+        Vector3 spawnPos = collision.contacts != null && collision.contacts.Length > 0 ? collision.contacts[0].point : transform.position;
+        if (explosionPrefab != null)
+            Instantiate(explosionPrefab, spawnPos, Quaternion.identity);
+
+        Destroy(gameObject);
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (!other.gameObject.CompareTag("Tower"))
+            return;
+
+        TowerHealth tower = other.gameObject.GetComponent<TowerHealth>() 
+                            ?? other.GetComponentInParent<TowerHealth>() 
+                            ?? _cachedTowerHealth;
+
+        if (tower != null)
+        {
+            tower.TakeDamage(towerDamage);
+        }
+        else
+        {
+            Debug.LogWarning("Helicopter: Trigger hit Tower but no TowerHealth found on " + other.gameObject.name);
+        }
+
+        Vector3 spawnPos = other.ClosestPoint(transform.position);
+        if (explosionPrefab != null)
+            Instantiate(explosionPrefab, spawnPos, Quaternion.identity);
+
+        Destroy(gameObject);
     }
 }
