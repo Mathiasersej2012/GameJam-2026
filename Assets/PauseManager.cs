@@ -1,6 +1,5 @@
 using StarterAssets;
 using UnityEngine;
-using UnityEngine.LowLevel;
 using UnityEngine.UI;
 
 public class PauseMenu : MonoBehaviour
@@ -11,22 +10,33 @@ public class PauseMenu : MonoBehaviour
     public Slider sensitivitySlider;
     public Text sensitivityText;
 
-
     private bool isPaused = false;
 
     void Start()
     {
         // Load saved sensitivity or default to 1
         float savedSensitivity = PlayerPrefs.GetFloat("Sensitivity", 1f);
-    sensitivitySlider.value = savedSensitivity;
+
+        if (sensitivitySlider != null)
+            sensitivitySlider.value = savedSensitivity;
+
         UpdateSensitivity(savedSensitivity);
 
-    sensitivitySlider.onValueChanged.AddListener(UpdateSensitivity);
+        if (sensitivitySlider != null)
+            sensitivitySlider.onValueChanged.AddListener(UpdateSensitivity);
+        else
+            Debug.LogWarning("PauseMenu: sensitivitySlider is not assigned.");
+    }
+
+    void OnDestroy()
+    {
+        if (sensitivitySlider != null)
+            sensitivitySlider.onValueChanged.RemoveListener(UpdateSensitivity);
     }
 
     void Update()
     {
-        // Åbn/luk pausemenu med ESC
+        // Open/close pause menu with ESC
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             if (isPaused)
@@ -38,26 +48,21 @@ public class PauseMenu : MonoBehaviour
 
     void UpdateSensitivity(float value)
     {
-        // Update text (optional)
         if (sensitivityText != null)
             sensitivityText.text = value.ToString("F2");
 
-        // Send value to your player controller
         FirstPersonController.sensitivity = value;
-
-        // Save it
         PlayerPrefs.SetFloat("Sensitivity", value);
     }
-
-
-
-
 
     public void Resume()
     {
         Debug.Log("Resume pressed");
-        pauseMenuUI.SetActive(false);
-        optionsMenuUI.SetActive(false);
+
+        if (pauseMenuUI != null)
+            pauseMenuUI.SetActive(false);
+        if (optionsMenuUI != null)
+            optionsMenuUI.SetActive(false);
 
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
@@ -69,8 +74,11 @@ public class PauseMenu : MonoBehaviour
     private void Pause()
     {
         Debug.Log("Game Paused");
-        pauseMenuUI.SetActive(true);
-        optionsMenuUI.SetActive(false);
+
+        if (pauseMenuUI != null)
+            pauseMenuUI.SetActive(true);
+        if (optionsMenuUI != null)
+            optionsMenuUI.SetActive(false);
 
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
@@ -82,15 +90,21 @@ public class PauseMenu : MonoBehaviour
     public void OpenOptions()
     {
         Debug.Log("Options opened");
-        pauseMenuUI.SetActive(false);
-        optionsMenuUI.SetActive(true);
+
+        if (pauseMenuUI != null)
+            pauseMenuUI.SetActive(false);
+        if (optionsMenuUI != null)
+            optionsMenuUI.SetActive(true);
     }
 
     public void CloseOptions()
     {
         Debug.Log("Options closed");
-        optionsMenuUI.SetActive(false);
-        pauseMenuUI.SetActive(true);
+
+        if (optionsMenuUI != null)
+            optionsMenuUI.SetActive(false);
+        if (pauseMenuUI != null)
+            pauseMenuUI.SetActive(true);
     }
 
     public void QuitGame()

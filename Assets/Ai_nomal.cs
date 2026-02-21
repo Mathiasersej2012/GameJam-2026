@@ -6,8 +6,11 @@ public class Ai_nomal : MonoBehaviour
 {
     public Transform target;
     public float stoppingDistance = 0.5f;
+    public GameObject explosionPrefab;
+    public int towerDamage = 1;
 
     private NavMeshAgent agent;
+    private TowerHealth towerHealth;
 
     void Start()
     {
@@ -20,6 +23,11 @@ public class Ai_nomal : MonoBehaviour
         }
 
         agent.stoppingDistance = stoppingDistance;
+
+        towerHealth = FindFirstObjectByType<TowerHealth>();
+
+        if (towerHealth == null)
+            Debug.LogWarning("Ai_nomal: Could not find TowerHealth in Start().");
 
         if (target != null)
         {
@@ -51,5 +59,23 @@ public class Ai_nomal : MonoBehaviour
 
         // Re-disable to keep behavior "set once"
         enabled = false;
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (!collision.gameObject.CompareTag("Tower"))
+            return;
+
+        if (towerHealth != null)
+            towerHealth.TakeDamage(towerDamage);
+        else
+            Debug.LogWarning("Ai_nomal: Tower was hit but cached TowerHealth is missing.");
+
+        if (explosionPrefab != null)
+            Instantiate(explosionPrefab, transform.position, Quaternion.identity);
+        else
+            Debug.LogWarning("Ai_nomal: No explosionPrefab assigned on " + name + ".");
+
+        Destroy(gameObject);
     }
 }
