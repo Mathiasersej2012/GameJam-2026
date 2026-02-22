@@ -862,6 +862,8 @@ MonoBehaviour:
   forwardLoopClip: {fileID: 8300000, guid: 9cc4ce5ff80d2e34b83bb1b90712f4f6, type: 3}
   forwardVolume: 1
   forwardThreshold: 0.5
+  bande: PLAYER
+  fallYThreshold: 200
 --- !u!114 &4692723015018390547
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2029,11 +2031,27 @@ MonoBehaviour:
   shootCamera: {fileID: 8438750638248481632}
   shootDistance: 1000
   enemyTag: Enemy
+  fireInterval: 1.2
   shootClip: {fileID: 8300000, guid: 31e7eb6945ae9684fa61231a2b8c42d9, type: 3}
   shootVolume: 1
+  readyClip: {fileID: 0}
+  readyVolume: 1
+  gamepadTriggerThreshold: 0.5
+  zoomGamepadThreshold: 0.5
+  rumbleLowFrequency: 0.4
+  rumbleHighFrequency: 0.8
+  rumbleDuration: 0.12
   zoomCamera: {fileID: 2691129244640393758}
   zoomFov: 15
   zoomOverlay: {fileID: 0}
+  zoomNoise: {fileID: 0}
+  zoomRecoilDuration: 0.12
+  zoomRecoilAmplitude: 0.04
+  zoomRecoilFrequency: 25
+  mouseSensitivityNormal: 1
+  mouseSensitivityZoom: 0.5
+  gamepadSensitivityNormal: 1
+  gamepadSensitivityZoom: 0.5
 --- !u!82 &294049771708325660
 AudioSource:
   m_ObjectHideFlags: 0

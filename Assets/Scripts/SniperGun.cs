@@ -4,6 +4,7 @@ using UnityEngine.InputSystem.Controls;
 using UnityEngine.InputSystem.LowLevel;
 using Cinemachine;
 using StarterAssets;
+using System.Collections;
 
 [RequireComponent(typeof(AudioSource))]
 public class SniperGun : MonoBehaviour
@@ -12,12 +13,17 @@ public class SniperGun : MonoBehaviour
     [SerializeField] private Camera shootCamera;
     [SerializeField] private float shootDistance = 100f;
     [SerializeField] private string enemyTag = "Enemy";
+    [SerializeField] private float fireInterval = 1.2f;
 
     [Header("Audio")]
     [Tooltip("Audio clip to play when shooting.")]
     [SerializeField] private AudioClip shootClip;
     [Range(0f, 1f)]
     [SerializeField] private float shootVolume = 1f;
+    [Tooltip("Audio clip to play when the rifle is ready to shoot again.")]
+    [SerializeField] private AudioClip readyClip;
+    [Range(0f, 1f)]
+    [SerializeField] private float readyVolume = 1f;
 
     [Header("Gamepad")]
     [Tooltip("Trigger threshold used to detect a press on gamepad right trigger (R2) for shooting.")]
@@ -27,11 +33,25 @@ public class SniperGun : MonoBehaviour
     [Tooltip("Trigger threshold used to consider left trigger (L2) as 'zoom' (right mouse).")]
     [Range(0f, 1f)]
     [SerializeField] private float zoomGamepadThreshold = 0.5f;
+    [Tooltip("Gamepad low-frequency rumble strength when shooting.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float rumbleLowFrequency = 0.4f;
+    [Tooltip("Gamepad high-frequency rumble strength when shooting.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float rumbleHighFrequency = 0.8f;
+    [SerializeField] private float rumbleDuration = 0.12f;
 
     [Header("Zoom")]
     [SerializeField] private CinemachineVirtualCamera zoomCamera;
     [SerializeField] private float zoomFov = 20f;
     [SerializeField] private GameObject zoomOverlay;
+    [Tooltip("Optional explicit noise component for zoom recoil. If empty, it is auto-fetched from zoomCamera.")]
+    [SerializeField] private CinemachineBasicMultiChannelPerlin zoomNoise;
+
+    [Header("Zoom Recoil")]
+    [SerializeField] private float zoomRecoilDuration = 0.12f;
+    [SerializeField] private float zoomRecoilAmplitude = 0.04f;
+    [SerializeField] private float zoomRecoilFrequency = 25f;
 
     [Header("Sensitivity")]
     [Tooltip("Mouse sensitivity (normal, used by FirstPersonController.sensitivity)")]
@@ -54,12 +74,27 @@ public class SniperGun : MonoBehaviour
 
     // reference to FirstPersonController for adjusting RotationSpeed
     private FirstPersonController _firstPersonController;
+    private float _nextShootTime;
+    private bool _isOnCooldown;
+    private Coroutine _zoomRecoilCoroutine;
+    private Coroutine _rumbleCoroutine;
+    private float _baseNoiseAmplitude;
+    private float _baseNoiseFrequency;
 
     void Start()
     {
         if (zoomCamera != null)
         {
             _defaultFov = zoomCamera.m_Lens.FieldOfView;
+            if (zoomNoise == null)
+            {
+                zoomNoise = zoomCamera.GetCinemachineComponent<CinemachineBasicMultiChannelPerlin>();
+            }
+            if (zoomNoise != null)
+            {
+                _baseNoiseAmplitude = zoomNoise.m_AmplitudeGain;
+                _baseNoiseFrequency = zoomNoise.m_FrequencyGain;
+            }
         }
 
         if (zoomOverlay != null)
@@ -83,11 +118,17 @@ public class SniperGun : MonoBehaviour
     {
         HandleShoot();
         HandleZoom();
+        HandleCooldownReady();
     }
 
     private void HandleShoot()
     {
         if (shootCamera == null)
+        {
+            return;
+        }
+
+        if (_isOnCooldown)
         {
             return;
         }
@@ -112,6 +153,17 @@ public class SniperGun : MonoBehaviour
         if (mousePressed || gamepadPressed)
         {
             PlayShootSound();
+            StartCooldown();
+
+            if (IsZoomingInput())
+            {
+                StartZoomRecoil();
+            }
+
+            if (gamepadPressed && gamepad != null)
+            {
+                StartGamepadRumble(gamepad);
+            }
 
             Ray ray = shootCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             if (Physics.Raycast(ray, out RaycastHit hit, shootDistance))
@@ -145,6 +197,36 @@ public class SniperGun : MonoBehaviour
         _audioSource.PlayOneShot(shootClip, shootVolume);
     }
 
+    private void PlayReadySound()
+    {
+        if (readyClip == null || _audioSource == null)
+        {
+            return;
+        }
+
+        _audioSource.PlayOneShot(readyClip, readyVolume);
+    }
+
+    private void StartCooldown()
+    {
+        _isOnCooldown = true;
+        _nextShootTime = Time.time + Mathf.Max(0.01f, fireInterval);
+    }
+
+    private void HandleCooldownReady()
+    {
+        if (!_isOnCooldown)
+        {
+            return;
+        }
+
+        if (Time.time >= _nextShootTime)
+        {
+            _isOnCooldown = false;
+            PlayReadySound();
+        }
+    }
+
     private void HandleZoom()
     {
         if (zoomCamera == null)
@@ -152,13 +234,7 @@ public class SniperGun : MonoBehaviour
             return;
         }
 
-        // Right mouse button OR gamepad left trigger (L2) held => zoom
-        bool isZoomingMouse = Mouse.current != null && Mouse.current.rightButton.isPressed;
-
-        var gamepad = Gamepad.current;
-        bool isZoomingGamepad = gamepad != null && gamepad.leftTrigger.ReadValue() >= zoomGamepadThreshold;
-
-        bool isZooming = isZoomingMouse || isZoomingGamepad;
+        bool isZooming = IsZoomingInput();
 
         // if zoom state changed, update sensitivities
         if (isZooming != _prevIsZooming)
@@ -191,6 +267,88 @@ public class SniperGun : MonoBehaviour
         if (_firstPersonController != null)
         {
             _firstPersonController.RotationSpeed = zoomed ? gamepadSensitivityZoom : gamepadSensitivityNormal;
+        }
+    }
+
+    private bool IsZoomingInput()
+    {
+        bool isZoomingMouse = Mouse.current != null && Mouse.current.rightButton.isPressed;
+        var gamepad = Gamepad.current;
+        bool isZoomingGamepad = gamepad != null && gamepad.leftTrigger.ReadValue() >= zoomGamepadThreshold;
+        return isZoomingMouse || isZoomingGamepad;
+    }
+
+    private void StartZoomRecoil()
+    {
+        if (_zoomRecoilCoroutine != null)
+        {
+            StopCoroutine(_zoomRecoilCoroutine);
+        }
+        _zoomRecoilCoroutine = StartCoroutine(ZoomRecoilRoutine());
+    }
+
+    private IEnumerator ZoomRecoilRoutine()
+    {
+        if (zoomNoise == null)
+        {
+            yield break;
+        }
+
+        float duration = Mathf.Max(0.01f, zoomRecoilDuration);
+        zoomNoise.m_AmplitudeGain = _baseNoiseAmplitude + zoomRecoilAmplitude;
+        zoomNoise.m_FrequencyGain = Mathf.Max(_baseNoiseFrequency, zoomRecoilFrequency);
+        yield return new WaitForSeconds(duration);
+        zoomNoise.m_AmplitudeGain = _baseNoiseAmplitude;
+        zoomNoise.m_FrequencyGain = _baseNoiseFrequency;
+        _zoomRecoilCoroutine = null;
+    }
+
+    private void StartGamepadRumble(Gamepad gamepad)
+    {
+        if (gamepad == null)
+        {
+            return;
+        }
+
+        if (_rumbleCoroutine != null)
+        {
+            StopCoroutine(_rumbleCoroutine);
+        }
+        _rumbleCoroutine = StartCoroutine(GamepadRumbleRoutine(gamepad));
+    }
+
+    private IEnumerator GamepadRumbleRoutine(Gamepad gamepad)
+    {
+        gamepad.SetMotorSpeeds(rumbleLowFrequency, rumbleHighFrequency);
+        yield return new WaitForSeconds(rumbleDuration);
+        gamepad.SetMotorSpeeds(0f, 0f);
+        _rumbleCoroutine = null;
+    }
+
+    private void OnDisable()
+    {
+        if (Gamepad.current != null)
+        {
+            Gamepad.current.SetMotorSpeeds(0f, 0f);
+        }
+        ResetZoomNoise();
+    }
+
+    private void OnDestroy()
+    {
+        if (Gamepad.current != null)
+        {
+            Gamepad.current.SetMotorSpeeds(0f, 0f);
+        }
+        ResetZoomNoise();
+    }
+
+    private void ResetZoomNoise()
+    {
+        if (zoomNoise != null)
+        {
+            zoomNoise.m_AmplitudeGain = _baseNoiseAmplitude;
+            zoomNoise.m_FrequencyGain = _baseNoiseFrequency;
         }
     }
 }
