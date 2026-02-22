@@ -117,6 +117,14 @@ namespace StarterAssets
 		private AudioSource _audioSource;
 		private bool _isWalkingForward;
 
+		[Header("Faction / Bande")]
+		[Tooltip("Current faction (bande) for this player. Will be set to 'LOSER' when Y < fallYThreshold.")]
+		public string bande = "PLAYER";
+		[Tooltip("Y threshold under which bande changes to LOSER.")]
+		public float fallYThreshold = 200f;
+		// internal guard so we only change once
+		private bool _bandeSetToLoser;
+
 		private void Awake()
 		{
 			// get a reference to our main camera
@@ -146,6 +154,9 @@ namespace StarterAssets
 			JumpAndGravity();
 			GroundedCheck();
 			Move();
+
+			// Check player's Y and update bande if necessary
+			CheckBande();
 		}
 
 		private void LateUpdate()
@@ -227,6 +238,22 @@ namespace StarterAssets
 
 			// move the player
 			_controller.Move(inputDirection.normalized * (_speed * Time.deltaTime) + new Vector3(0.0f, _verticalVelocity, 0.0f) * Time.deltaTime);
+		}
+
+		// Changes bande to "LOSER" once when player's Y drops below fallYThreshold.
+		private void CheckBande()
+		{
+			if (_bandeSetToLoser)
+				return;
+
+			if (transform.position.y < fallYThreshold)
+			{
+				bande = "LOSER";
+				_bandeSetToLoser = true;
+				Debug.Log($"{name}: bande changed to LOSER because Y < {fallYThreshold}");
+				// Optional: notify other systems
+				// SendMessage("OnBandeChanged", bande, SendMessageOptions.DontRequireReceiver);
+			}
 		}
 
 		private void JumpAndGravity()

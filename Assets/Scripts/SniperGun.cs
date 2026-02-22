@@ -1,5 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Controls;
+using UnityEngine.InputSystem.LowLevel;
 using Cinemachine;
 using StarterAssets;
 
@@ -10,50 +12,54 @@ public class SniperGun : MonoBehaviour
     [SerializeField] private Camera shootCamera;
     [SerializeField] private float shootDistance = 100f;
     [SerializeField] private string enemyTag = "Enemy";
-    [Tooltip("Seconds between each shot.")]
-    [SerializeField] private float fireInterval = 1.5f;
 
     [Header("Audio")]
-    [Tooltip("Audio clip to play when left clicking (shot sound).")]
+    [Tooltip("Audio clip to play when shooting.")]
     [SerializeField] private AudioClip shootClip;
     [Range(0f, 1f)]
     [SerializeField] private float shootVolume = 1f;
-    [Tooltip("Audio clip to play when the rifle is ready to fire again.")]
-    [SerializeField] private AudioClip readyClip;
+
+    [Header("Gamepad")]
+    [Tooltip("Trigger threshold used to detect a press on gamepad right trigger (R2) for shooting.")]
     [Range(0f, 1f)]
-    [SerializeField] private float readyVolume = 1f;
+    [SerializeField] private float gamepadTriggerThreshold = 0.5f;
+
+    [Tooltip("Trigger threshold used to consider left trigger (L2) as 'zoom' (right mouse).")]
+    [Range(0f, 1f)]
+    [SerializeField] private float zoomGamepadThreshold = 0.5f;
 
     [Header("Zoom")]
     [SerializeField] private CinemachineVirtualCamera zoomCamera;
     [SerializeField] private float zoomFov = 20f;
     [SerializeField] private GameObject zoomOverlay;
-    [Tooltip("Look sensitivity multiplier while zooming (right click held).")]
-    [Range(0.05f, 1f)]
-    [SerializeField] private float zoomSensitivityMultiplier = 0.35f;
-    [Tooltip("Optional explicit reference. If empty, the script finds it at runtime.")]
-    [SerializeField] private FirstPersonController lookController;
 
-    [Header("Zoom Recoil")]
-    [Tooltip("Camera shake strength when firing while zooming.")]
-    [SerializeField] private float recoilAmplitude = 1.2f;
-    [Tooltip("Camera shake frequency when firing while zooming.")]
-    [SerializeField] private float recoilFrequency = 3.5f;
-    [Tooltip("How quickly the recoil shake fades out.")]
-    [SerializeField] private float recoilRecoverSpeed = 10f;
+    [Header("Sensitivity")]
+    [Tooltip("Mouse sensitivity (normal, used by FirstPersonController.sensitivity)")]
+    [SerializeField] private float mouseSensitivityNormal = 1f;
+    [Tooltip("Mouse sensitivity while zoomed")]
+    [SerializeField] private float mouseSensitivityZoom = 0.5f;
+    [Tooltip("Gamepad rotation sensitivity (normal) applied to FirstPersonController.RotationSpeed")]
+    [SerializeField] private float gamepadSensitivityNormal = 1f;
+    [Tooltip("Gamepad rotation sensitivity while zoomed")]
+    [SerializeField] private float gamepadSensitivityZoom = 0.5f;
 
     private float _defaultFov;
-    private float _defaultRotationSpeed;
     private AudioSource _audioSource;
-    private CinemachineBasicMultiChannelPerlin _zoomNoise;
-    private float _nextShootTime;
-    private bool _isZooming;
+
+    // Track previous frame right trigger value so we can detect a rising edge (press) for shooting
+    private float _prevRightTriggerValue;
+
+    // track zoom state so we only apply sensitivities once when it changes
+    private bool _prevIsZooming;
+
+    // reference to FirstPersonController for adjusting RotationSpeed
+    private FirstPersonController _firstPersonController;
 
     void Start()
     {
         if (zoomCamera != null)
         {
             _defaultFov = zoomCamera.m_Lens.FieldOfView;
-            _zoomNoise = zoomCamera.GetCinemachineComponent<CinemachineBasicMultiChannelPerlin>();
         }
 
         if (zoomOverlay != null)
@@ -68,58 +74,44 @@ public class SniperGun : MonoBehaviour
         }
         _audioSource.playOnAwake = false;
 
-        if (lookController == null)
-        {
-            lookController = FindFirstObjectByType<FirstPersonController>();
-        }
-
-        if (lookController != null)
-        {
-            _defaultRotationSpeed = lookController.RotationSpeed;
-        }
-        _nextShootTime = -1f;
-
-        if (_zoomNoise != null)
-        {
-            _zoomNoise.m_AmplitudeGain = 0f;
-            _zoomNoise.m_FrequencyGain = 0f;
-        }
+        // cache FirstPersonController if present and apply default sensitivities
+        _firstPersonController = FindObjectOfType<FirstPersonController>();
+        ApplySensitivities(false);
     }
 
     void Update()
     {
-        HandleZoom();
-        UpdateRecoil();
         HandleShoot();
+        HandleZoom();
     }
 
     private void HandleShoot()
     {
-        if (shootCamera == null || Mouse.current == null)
+        if (shootCamera == null)
         {
             return;
         }
 
-        if (_nextShootTime >= 0f && Time.time >= _nextShootTime)
+        // Keep mouse left click for desktop, and also support PS5 R2 (right trigger)
+        bool mousePressed = Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
+
+        // Detect gamepad right trigger (R2) rising edge
+        bool gamepadPressed = false;
+        var gamepad = Gamepad.current;
+        if (gamepad != null)
         {
-            PlayReadySound();
-            _nextShootTime = -1f;
+            float currentRightTrigger = gamepad.rightTrigger.ReadValue();
+            // rising edge: current >= threshold and previous < threshold
+            if (currentRightTrigger >= gamepadTriggerThreshold && _prevRightTriggerValue < gamepadTriggerThreshold)
+            {
+                gamepadPressed = true;
+            }
+            _prevRightTriggerValue = currentRightTrigger;
         }
 
-        if (Mouse.current.leftButton.wasPressedThisFrame)
+        if (mousePressed || gamepadPressed)
         {
-            if (_nextShootTime > Time.time)
-            {
-                return;
-            }
-
             PlayShootSound();
-            _nextShootTime = Time.time + fireInterval;
-
-            if (_isZooming)
-            {
-                TriggerZoomRecoil();
-            }
 
             Ray ray = shootCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             if (Physics.Raycast(ray, out RaycastHit hit, shootDistance))
@@ -153,81 +145,52 @@ public class SniperGun : MonoBehaviour
         _audioSource.PlayOneShot(shootClip, shootVolume);
     }
 
-    private void PlayReadySound()
+    private void HandleZoom()
     {
-        if (readyClip == null || _audioSource == null)
+        if (zoomCamera == null)
         {
             return;
         }
 
-        _audioSource.PlayOneShot(readyClip, readyVolume);
-    }
+        // Right mouse button OR gamepad left trigger (L2) held => zoom
+        bool isZoomingMouse = Mouse.current != null && Mouse.current.rightButton.isPressed;
 
-    private void HandleZoom()
-    {
-        _isZooming = Mouse.current != null && Mouse.current.rightButton.isPressed;
-        if (zoomCamera != null && _isZooming)
+        var gamepad = Gamepad.current;
+        bool isZoomingGamepad = gamepad != null && gamepad.leftTrigger.ReadValue() >= zoomGamepadThreshold;
+
+        bool isZooming = isZoomingMouse || isZoomingGamepad;
+
+        // if zoom state changed, update sensitivities
+        if (isZooming != _prevIsZooming)
+        {
+            ApplySensitivities(isZooming);
+            _prevIsZooming = isZooming;
+        }
+
+        if (isZooming)
         {
             zoomCamera.m_Lens.FieldOfView = zoomFov;
         }
-        else if (zoomCamera != null)
+        else
         {
             zoomCamera.m_Lens.FieldOfView = _defaultFov;
         }
 
         if (zoomOverlay != null)
         {
-            zoomOverlay.SetActive(_isZooming);
-        }
-
-        if (lookController != null)
-        {
-            lookController.RotationSpeed = _isZooming
-                ? _defaultRotationSpeed * zoomSensitivityMultiplier
-                : _defaultRotationSpeed;
+            zoomOverlay.SetActive(isZooming);
         }
     }
 
-    private void TriggerZoomRecoil()
+    // Apply sensitivity values: mouseSensitivity affects static FirstPersonController.sensitivity,
+    // gamepad sensitivity adjusts the instance RotationSpeed (affects look from input system path).
+    private void ApplySensitivities(bool zoomed)
     {
-        if (_zoomNoise == null)
+        FirstPersonController.sensitivity = zoomed ? mouseSensitivityZoom : mouseSensitivityNormal;
+
+        if (_firstPersonController != null)
         {
-            return;
-        }
-
-        _zoomNoise.m_AmplitudeGain = recoilAmplitude;
-        _zoomNoise.m_FrequencyGain = recoilFrequency;
-    }
-
-    private void UpdateRecoil()
-    {
-        if (_zoomNoise == null)
-        {
-            return;
-        }
-
-        _zoomNoise.m_AmplitudeGain = Mathf.MoveTowards(
-            _zoomNoise.m_AmplitudeGain,
-            0f,
-            recoilRecoverSpeed * Time.deltaTime);
-
-        _zoomNoise.m_FrequencyGain = Mathf.MoveTowards(
-            _zoomNoise.m_FrequencyGain,
-            0f,
-            recoilRecoverSpeed * Time.deltaTime);
-    }
-
-    private void OnDisable()
-    {
-        if (lookController != null)
-        {
-            lookController.RotationSpeed = _defaultRotationSpeed;
-        }
-
-        if (_zoomNoise != null)
-        {
-            _zoomNoise.m_AmplitudeGain = 0f;
-            _zoomNoise.m_FrequencyGain = 0f;
+            _firstPersonController.RotationSpeed = zoomed ? gamepadSensitivityZoom : gamepadSensitivityNormal;
         }
     }
 }
