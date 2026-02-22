@@ -12,7 +12,7 @@ public class MainMenu : MonoBehaviour
     // Called when pressing "Start"
     public void StartGame()
     {
-        SceneManager.LoadScene("Sample  Scene");
+        SceneManager.LoadScene("MainSceneNew");
         // Husk at tilføje scenen i Build Settings
     }
 
