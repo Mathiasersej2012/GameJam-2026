@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 using UnityEngine.InputSystem.LowLevel;
+using UnityEngine.InputSystem.Haptics;
 using Cinemachine;
 using StarterAssets;
 using System.Collections;
@@ -78,6 +79,8 @@ public class SniperGun : MonoBehaviour
     private bool _isOnCooldown;
     private Coroutine _zoomRecoilCoroutine;
     private Coroutine _rumbleCoroutine;
+    private IDualMotorRumble _activeRumbleDevice;
+    private bool _hasWarnedNoRumbleSupport;
     private float _baseNoiseAmplitude;
     private float _baseNoiseFrequency;
 
@@ -310,37 +313,61 @@ public class SniperGun : MonoBehaviour
             return;
         }
 
+        if (gamepad is not IDualMotorRumble dualMotorRumble)
+        {
+            if (!_hasWarnedNoRumbleSupport)
+            {
+                Debug.LogWarning("SniperGun: Connected gamepad does not expose dual-motor rumble through Unity Input System.");
+                _hasWarnedNoRumbleSupport = true;
+            }
+            return;
+        }
+
         if (_rumbleCoroutine != null)
         {
             StopCoroutine(_rumbleCoroutine);
         }
-        _rumbleCoroutine = StartCoroutine(GamepadRumbleRoutine(gamepad));
+        _rumbleCoroutine = StartCoroutine(GamepadRumbleRoutine(dualMotorRumble));
     }
 
-    private IEnumerator GamepadRumbleRoutine(Gamepad gamepad)
+    private IEnumerator GamepadRumbleRoutine(IDualMotorRumble rumbleDevice)
     {
-        gamepad.SetMotorSpeeds(rumbleLowFrequency, rumbleHighFrequency);
+        _activeRumbleDevice = rumbleDevice;
+        rumbleDevice.SetMotorSpeeds(rumbleLowFrequency, rumbleHighFrequency);
         yield return new WaitForSeconds(rumbleDuration);
-        gamepad.SetMotorSpeeds(0f, 0f);
+        if (_activeRumbleDevice != null)
+        {
+            _activeRumbleDevice.SetMotorSpeeds(0f, 0f);
+        }
+        _activeRumbleDevice = null;
         _rumbleCoroutine = null;
     }
 
     private void OnDisable()
     {
-        if (Gamepad.current != null)
-        {
-            Gamepad.current.SetMotorSpeeds(0f, 0f);
-        }
+        StopRumble();
         ResetZoomNoise();
     }
 
     private void OnDestroy()
     {
-        if (Gamepad.current != null)
-        {
-            Gamepad.current.SetMotorSpeeds(0f, 0f);
-        }
+        StopRumble();
         ResetZoomNoise();
+    }
+
+    private void StopRumble()
+    {
+        if (_rumbleCoroutine != null)
+        {
+            StopCoroutine(_rumbleCoroutine);
+            _rumbleCoroutine = null;
+        }
+
+        if (_activeRumbleDevice != null)
+        {
+            _activeRumbleDevice.SetMotorSpeeds(0f, 0f);
+            _activeRumbleDevice = null;
+        }
     }
 
     private void ResetZoomNoise()
