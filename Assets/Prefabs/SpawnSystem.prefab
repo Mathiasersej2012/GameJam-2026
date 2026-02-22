@@ -63,6 +63,7 @@ Transform:
   - {fileID: 1414971637687831372}
   - {fileID: 790693074427374667}
   - {fileID: 3270768160432210691}
+  - {fileID: 2934755468018301679}
   m_Father: {fileID: 7847789845793978701}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &3813573123013678530
@@ -90,7 +91,7 @@ Transform:
   m_GameObject: {fileID: 3813573123013678530}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 652, y: 164.4, z: 635.5}
+  m_LocalPosition: {x: 663.1, y: 134.1, z: 713.3}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -158,6 +159,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1641361494262460622}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &6410069123765470879
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2934755468018301679}
+  m_Layer: 0
+  m_Name: SpawnArea 1 (3)
+  m_TagString: Untagged
+  m_Icon: {fileID: 3306451490063965843, guid: 0000000000000000d000000000000000, type: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2934755468018301679
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6410069123765470879}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 448.1, y: 153.06, z: 405.6}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1641361494262460622}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6816004444337422113
 GameObject:
   m_ObjectHideFlags: 0
@@ -207,6 +239,8 @@ MonoBehaviour:
   groundSpawnPoints:
   - {fileID: 1414971637687831372}
   - {fileID: 790693074427374667}
+  - {fileID: 3270768160432210691}
+  - {fileID: 2934755468018301679}
   flyingSpawnPoints:
   - {fileID: 8031918737631151675}
   - {fileID: 3564918273680770178}
@@ -220,7 +254,7 @@ MonoBehaviour:
     - prefab: {fileID: 8705463726987927563, guid: 411427525c76042b5ade93ada1362407, type: 3}
       isFlying: 0
     spawnInterval: 0.3
-    waveDuration: 3
+    waveDuration: 20
   - waveName: Fast
     enemies:
     - prefab: {fileID: 1736356103631994038, guid: b3a739223ff134415ab0b7d7ece3955f, type: 3}

@@ -66,7 +66,7 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: ae19ec2c6ae77604f84f8054cf97dd30, type: 2}
     - target: {fileID: 919132149155446097, guid: 04f52bfda92544e48bb61670cf1f3931, type: 3}
       propertyPath: m_Name
-      value: big boy
+      value: Big Boy
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 04f52bfda92544e48bb61670cf1f3931, type: 3}
       propertyPath: m_TagString
@@ -156,7 +156,7 @@ MonoBehaviour:
   target: {fileID: 0}
   stoppingDistance: 0.5
   explosionPrefab: {fileID: 1730653216692495514, guid: 823259e00c237469d890441472bd5e0e, type: 3}
-  towerDamage: 10
+  towerDamage: 2
 --- !u!95 &1865968654672926135
 Animator:
   serializedVersion: 7
