@@ -41,6 +41,7 @@ public class SniperGun : MonoBehaviour
     [Range(0f, 1f)]
     [SerializeField] private float rumbleHighFrequency = 0.8f;
     [SerializeField] private float rumbleDuration = 0.12f;
+    [SerializeField] private bool logRumbleDebug = false;
 
     [Header("Zoom")]
     [SerializeField] private CinemachineVirtualCamera zoomCamera;
@@ -163,9 +164,9 @@ public class SniperGun : MonoBehaviour
                 StartZoomRecoil();
             }
 
-            if (gamepadPressed && gamepad != null)
+            if (gamepadPressed)
             {
-                StartGamepadRumble(gamepad);
+                StartGamepadRumble();
             }
 
             Ray ray = shootCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
@@ -306,28 +307,52 @@ public class SniperGun : MonoBehaviour
         _zoomRecoilCoroutine = null;
     }
 
-    private void StartGamepadRumble(Gamepad gamepad)
+    private void StartGamepadRumble()
     {
-        if (gamepad == null)
-        {
-            return;
-        }
-
-        if (gamepad is not IDualMotorRumble dualMotorRumble)
+        if (!TryGetRumbleDevice(out IDualMotorRumble rumbleDevice, out InputDevice inputDevice))
         {
             if (!_hasWarnedNoRumbleSupport)
             {
-                Debug.LogWarning("SniperGun: Connected gamepad does not expose dual-motor rumble through Unity Input System.");
+                Debug.LogWarning("SniperGun: No connected gamepad exposes dual-motor rumble through Unity Input System.");
                 _hasWarnedNoRumbleSupport = true;
             }
             return;
+        }
+
+        if (logRumbleDebug)
+        {
+            Debug.Log($"SniperGun: Rumble on device '{inputDevice.displayName}' ({inputDevice.layout}, id={inputDevice.deviceId}) low={rumbleLowFrequency} high={rumbleHighFrequency} duration={rumbleDuration:0.00}s");
         }
 
         if (_rumbleCoroutine != null)
         {
             StopCoroutine(_rumbleCoroutine);
         }
-        _rumbleCoroutine = StartCoroutine(GamepadRumbleRoutine(dualMotorRumble));
+        _rumbleCoroutine = StartCoroutine(GamepadRumbleRoutine(rumbleDevice));
+    }
+
+    private bool TryGetRumbleDevice(out IDualMotorRumble rumbleDevice, out InputDevice inputDevice)
+    {
+        if (Gamepad.current is IDualMotorRumble currentRumble)
+        {
+            rumbleDevice = currentRumble;
+            inputDevice = Gamepad.current;
+            return true;
+        }
+
+        foreach (var pad in Gamepad.all)
+        {
+            if (pad is IDualMotorRumble padRumble)
+            {
+                rumbleDevice = padRumble;
+                inputDevice = pad;
+                return true;
+            }
+        }
+
+        rumbleDevice = null;
+        inputDevice = null;
+        return false;
     }
 
     private IEnumerator GamepadRumbleRoutine(IDualMotorRumble rumbleDevice)
